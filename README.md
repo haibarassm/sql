@@ -149,3 +149,180 @@ select deptno
     from dept  
 where deptno not exists (select deptno from emp)
 ```
+## 从一个表检索与另一个表不相关的行  
+有时也被成为反连接  
+
+数据库 | 解决方案 |
+-------|---------|
+Oracle 8i - | 可以使用专有的外链接语法 |
+其他数据库 | 使用外链接过滤掉null值 |
+
+Oracle 8i -  
+```
+select d.*  
+    from d.deptno, e.deptno  
+where d.deptno = e.deptno (+)  
+    and e.deptno is null
+```
+其他数据库  
+```
+select d.*  
+    from dept d left outer join emp e  
+        (on d.deptno = e.deptno ) 
+    where e.deptno is null
+```
+## 新增连接查询获得额外信息不丢失原有信息
+### 解决方案一：外链接查询
+其他数据库  
+```
+select e.ename,d.loc,eb.received  
+    from emp e join dept d  
+        on (e.deptno=d.deptno)  
+    left join emp_bonus eb  
+        on (e..empno=eb.empno)
+order by 2
+```
+Oracle 8i -  
+```
+select e.ename,d.loc,eb.received  
+    from emp e,dept d,emp_bonus eb  
+where e.deptno=d.deptno  
+    and e.empno=eb.empno(+)  
+order by 2
+```
+外链接之所以能解决这个问题，是因为它不会过滤掉任何应该被返回的行  
+
+### 解决方案二：标量子查询
+这种方法适用于所有数据库
+
+```
+select e.ename,d.loc,
+    (
+        select eb.received from emp_bonus eb 
+        where eb.empno=e.empno
+    ) as received
+from emp e,dept d  
+where e.deptno=d.deptno
+order by 2
+```
+## 识别并消除笛卡尔积
+解决方案  
+在from字句里对两个表进行连接查询，已得到正确的结果集
+```
+select e.ename,d.loc  
+    from emp e,dept d  
+where e.deptno=10  
+    and d.deptno=e.deptno
+```
+## 使用连接查询与聚合函数避免重复数据
+### 解决方案一：调用聚合函数时直接使用关键字DISTINCT，去除重复项再参与计算
+MySQL和PostgreSQL
+```
+select deptno
+        sum(distinct sal) as total_sal,
+        sum(bonus) as total_bonus
+    from (
+        select e.empno,
+                e.ename,
+                e.sal,
+                e.deptno,
+                e.sal*case when eb.type=1 then .1
+                             when eb.type=2 thwn .2
+                             else .3
+                        end as bonus 
+            from emp r,emp_bonus eb
+            where e.empno =eb.empno
+                and e.deptno=10
+    ) x
+    group by deptno
+```
+DB2、Oracle和SQL Server
+```
+select distinct deptno,total_sal,total_bonus
+    from (
+        select e.empno,
+                e.ename,
+                sum(distinct e.sal) over
+                (partition by e.deptno) as total_sal,
+                e.deptno,
+                sum(e.sal*case when eb.type=1 then .1
+                                when eb.type=2 then .2 
+                                else .3 end) over
+                (partition by deptno) as total_bonus
+                from emp e,emp_bonus eb
+                where e.empno=eb.empno
+                    and e.deptno=10
+    ) x
+```
+### 解决方案二：进行连接查询之前先进行聚合运算
+
+MySQL和PostgreSQL
+```
+select d.deptno, 
+        d.total_sal,
+        sum(
+            e.sal*case when eb.type=1 then .1
+                        when eb.type=2 then .2
+                        else .3 end 
+        ) as total_bonus
+    from emp e,
+    emp_bonus eb,
+    (
+        select deptno,sum(sal) as total_sal
+            from emp
+        where e.deptno,sum(sal) as total_sal
+            from emp
+        where deptno=10
+        group by deptno
+    ) d
+where e.deptno=d.deptno
+    and e.empno=eb.empno
+group by d.depno,d.total_sal
+```
+ DB2、Oracle和SQL Server  
+ ```
+ select e.empno,
+        e.ename,
+        sum(distinct e.sal) over
+        (partition by e.deptno) as total_sal,
+        e.deptno,
+        sum(e.sal*case when eb.type=1 then .1
+                        when eb.type=2 then .2
+                        else .3 end) over
+        (partition by deptno) as total_bonus
+    from emp e,emp_bonus eb 
+where e.empno=eb.empno
+    and e.deptno=10
+ ``` 
+## 全外连接
+数据库 | 解决方案 |
+-------|---------|
+Oracle 8i -|专有语法实现外链接 |
+其他数据库 | 显示外链接或者合并两个外链接的结果| 
+
+### 除了8i -的数据库的显示外链接
+```
+select d.deptno,d.dname,e.ename
+    from dept d full outer join emp e
+        on (d.deptno=e.deptno)
+```
+### 除了8i -的数据库的两个外链接合并
+```
+select d.deptno,d.dname,e.ename
+    from dept d right outer join emp e 
+        on (d.deptno=e.deptno)
+    union
+select d.deptno,d.dname,e.ename
+    from dept d left outer join emp e
+        on (d.deptno=e.deptno)
+```
+### 8i -的专有语法
+```
+select d.deptno,d.dname,e.ename
+    from dept d,emp e
+where d.deptno=e.deptno(+)
+    union
+select d.deptno,d.dname,e.ename
+    from dept d,emp e
+where d.deptno(+)=e.deptno
+```
