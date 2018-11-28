@@ -326,3 +326,15 @@ select d.deptno,d.dname,e.ename
     from dept d,emp e
 where d.deptno(+)=e.deptno
 ```
+## 血一样的教训
+1、先写注释  
+
+2、对好  
+begin   
+
+end  
+3、用table往里挪一点表示分层  
+
+4、设置变量属性 最前面用set开头  
+
+5、if里面不能有算术表达式 只能算完之后把结果放进去比较判断 case也一样  
