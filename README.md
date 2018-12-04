@@ -347,4 +347,39 @@ end
         ELSE 0
         END
 ```
-7、如果是连表查询操作，where 条件中需要指定是主表的字段还是从表的，如果主表有就按照主表的，java后端接收参数才不会出错。
+7、如果是连表查询操作，where 条件中需要指定是主表的字段还是从表的，如果主表有就按照主表的，java后端接收参数才不会出错。  
+
+8、null作为一个特殊的值，需要先转化成'' 或者0才能进行比较  
+9、将查询结果拼接成字符串，用stuff函数  
+    如果存在整型和varchar直接转换的用convert
+```
+    select  @contactGroupMapIds=(
+        stuff(
+                (select ',' + convert(varchar,mapid) from wx_contact_group_map 
+		        where wx_user_id in (select id from dbo.StrSplitToTable(@wxUserIds,','))
+		            and contact_id in (select id from dbo.StrSplitToTable(@wxContactIds,',')) for xml path('')
+                ),
+                    1,
+                    1,
+                    ''
+            )
+    );	
+```
+10、时间比较函数  
+    如果存在三分钟以内的62数据
+```
+    IF EXISTS(
+        select * from wx_sixtwo 
+        where DATEDIFF(MINUTE, @updateTime, GETDATE()) <= 3 
+        AND [id] = @id
+    )
+```
+11、判断有木有一般是用EXISTS函数  
+```
+     IF EXISTS
+     (
+         SELECT *
+         FROM wx_sixtwo
+         WHERE [id] = @id
+     )
+```
