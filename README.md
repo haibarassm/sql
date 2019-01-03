@@ -227,7 +227,7 @@ select deptno
                 e.sal,
                 e.deptno,
                 e.sal*case when eb.type=1 then .1
-                             when eb.type=2 thwn .2
+                             when eb.type=2 then .2
                              else .3
                         end as bonus 
             from emp r,emp_bonus eb
@@ -271,8 +271,7 @@ select d.deptno,
         select deptno,sum(sal) as total_sal
             from emp
         where e.deptno,sum(sal) as total_sal
-            from emp
-        where deptno=10
+            from emp where deptno=10
         group by deptno
     ) d
 where e.deptno=d.deptno
@@ -349,7 +348,7 @@ end
 ```
 7、如果是连表查询操作，where 条件中需要指定是主表的字段还是从表的，如果主表有就按照主表的，java后端接收参数才不会出错。  
 
-8、null作为一个特殊的值，需要先转化成'' 或者0才能进行比较  
+8、null作为一个特殊的值，一般需要先转化成'' 或者0才能进行比较,迫不得已使用is null比较  
 9、将查询结果拼接成字符串，用stuff函数  
     如果存在整型和varchar直接转换的用convert
 ```
@@ -366,6 +365,7 @@ end
     );	
 ```
 10、时间比较函数  
+    DATEDIFF 算出来的是时间段,DATEADD是算完之后的具体时间
     如果存在三分钟以内的62数据
 ```
     IF EXISTS(
